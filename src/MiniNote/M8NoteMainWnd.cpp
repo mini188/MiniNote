@@ -57,62 +57,66 @@ NoteItem* CM8NoteMainWnd::GetNoteItem(int nIndex)
 bool CM8NoteMainWnd::UpdateOldData(LPTSTR strDataDir)
 {
 	CMzString tmpDataDir = strDataDir;
-	if (DirectoryExists(tmpDataDir))
+	if (DirectoryExists(tmpDataDir) == false)
 	{
-		WIN32_FIND_DATA FindFileData;
-		HANDLE hFind;
+		return false;
+	}
+	
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind;
 
-		hFind = FindFirstFile(tmpDataDir + L"*.ini", &FindFileData);
-		if (hFind == INVALID_HANDLE_VALUE) 
+	hFind = FindFirstFile(tmpDataDir + L"*.ini", &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) 
+	{
+		return false;
+	} 
+	else 
+	{
+		CMzString filename;
+		TCHAR *str = 0;
+		TCHAR *sTmp;
+		M8NoteFileReader tmpReader;
+		do
 		{
-			return false;
-		} 
-		else 
-		{
-			CMzString filename;
-			TCHAR *str = 0;
-			TCHAR *sTmp;
-			M8NoteFileReader tmpReader;
-			do
+			//跳过'.''..'
+			if (FindFileData.cFileName[0] == '.')
+				continue;
+
+			//找到一个文件
+			filename = tmpDataDir + FindFileData.cFileName;
+			if (tmpReader.OpenFile(filename) == false)
 			{
-				//跳过'.''..'
-				if (FindFileData.cFileName[0] == '.')
-					continue;
-
-				//找到一个文件
-				filename = tmpDataDir + FindFileData.cFileName;
-				if (tmpReader.OpenFile(filename))
+				continue;
+			}
+			str = tmpReader.GetText();//获取文件内容
+			//加载文件，将清除掉INI信息，留下内容及文件名
+			if (IniReadString(L"Header", L"Title", &sTmp, filename))
+			{
+				int ipos = FindStr(str, L"Context=");
+				if (ipos != -1)
 				{
-					str = tmpReader.GetText();//获取文件内容
-					//加载文件，将清除掉INI信息，留下内容及文件名
-					if (IniReadString(L"Header", L"Title", &sTmp, filename))
+					int i = 0;
+					ipos += wcslen(L"Content=");
+					while(i <= ipos)
 					{
-						int ipos = FindStr(str, L"Context=");
-						if (ipos != -1)
-						{
-							int i = 0;
-							ipos += wcslen(L"Content=");
-							while(i <= ipos)
-							{
-								++str;
-								++i;
-							}
-							--str;
-							tmpReader.SetText(*str);
-							//格式化新的文件名
-							LPTSTR szBuffer=new TCHAR[1024];
-							wsprintf(szBuffer, L"%s\\%s.%s", tmpDataDir.C_Str(), sTmp, L"txt");//保存文件名
-							if (tmpReader.SaveAsFile(szBuffer))
-								return DeleteFile(filename) == TRUE;
-						}
+						++str;
+						++i;
 					}
+					--str;
+					tmpReader.SetText(*str);
+					//格式化新的文件名
+					LPTSTR szBuffer=new TCHAR[1024];
+					wsprintf(szBuffer, L"%s\\%s.%s", tmpDataDir.C_Str(), sTmp, L"txt");//保存文件名
+					if (tmpReader.SaveAsFile(szBuffer))
+						return DeleteFile(filename) == TRUE;
 				}
 			}
-			while (FindNextFile(hFind, &FindFileData));
+
 		}
-		FindClose(hFind);//关闭句柄
-		return true;
+		while (FindNextFile(hFind, &FindFileData));
 	}
+	FindClose(hFind);//关闭句柄
+	return true;
 }
 
 void CM8NoteMainWnd::LoadNoteList(LPTSTR strDataDir)
@@ -341,43 +345,45 @@ void CM8NoteMainWnd::OpenFile()
 
 void CM8NoteMainWnd::DeleteNoteItem()
 {
-	if (MzMessageBoxEx(m_hWnd, L"确认要删除所选日志吗？", L"提醒", MZ_OKCANCEL) == 1)
+	if (MzMessageBoxEx(m_hWnd, L"确认要删除所选日志吗？", L"提醒", MZ_OKCANCEL) != 1)
 	{
-		if (m_NoteList.GetSelectMode())
+		return;
+	}
+	
+	if (m_NoteList.GetSelectMode())
+	{
+		if (m_NoteList.GetItemCount() > 0)
 		{
-			if (m_NoteList.GetItemCount() > 0)
+			int i = m_NoteList.GetItemCount()-1;
+			ListItem *pItem;
+			while (i >= 0)
 			{
-				int i = m_NoteList.GetItemCount()-1;
-				ListItem *pItem;
-				while (i >= 0)
-				{
-					pItem = m_NoteList.GetItem(i);
-					if (pItem==0) return;
-					if (pItem->Data==0) return;
+				pItem = m_NoteList.GetItem(i);
+				if (pItem==0) return;
+				if (pItem->Data==0) return;
 
-					NoteItem *itemData = (NoteItem*)pItem->Data;					
-					if (itemData->bSelected)
-					{
-						DoDeleteNoteItem(i);
-					}
-					i--;
+				NoteItem *itemData = (NoteItem*)pItem->Data;					
+				if (itemData->bSelected)
+				{
+					DoDeleteNoteItem(i);
 				}
-				LoadNoteList(m_DataPath);
+				i--;
 			}
+			LoadNoteList(m_DataPath);
+		}
+	}
+	else
+	{
+		int idx = m_NoteList.GetSelectedIndex();
+		if (idx != -1)
+		{
+			//刷新列表
+			if (DoDeleteNoteItem(idx))
+				LoadNoteList(m_DataPath);
 		}
 		else
 		{
-			int idx = m_NoteList.GetSelectedIndex();
-			if (idx != -1)
-			{
-				//刷新列表
-				if (DoDeleteNoteItem(idx))
-					LoadNoteList(m_DataPath);
-			}
-			else
-			{
-				MzMessageBoxEx(m_hWnd, L"没有选择日志哦！", L"提醒");
-			}
+			MzMessageBoxEx(m_hWnd, L"没有选择日志哦！", L"提醒");
 		}
 	}
 }
