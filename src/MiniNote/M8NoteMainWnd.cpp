@@ -125,63 +125,58 @@ void CM8NoteMainWnd::LoadNoteList(LPTSTR strDataDir)
 	this->m_NoteItems.clear();
 	CMzString tmpDataDir = strDataDir;
 	//检查Data文件夹是否存在，不存在则创建
-	if (DirectoryExists(tmpDataDir))
+	if (DirectoryExists(tmpDataDir) == false)
 	{
-		WIN32_FIND_DATA FindFileData;
-		HANDLE hFind;
-
-		hFind = FindFirstFile(tmpDataDir + L"*.*", &FindFileData);
-		if (hFind == INVALID_HANDLE_VALUE) 
-		{
-			return;
-		} 
-		else 
-		{
-			ListItem listItem;
-			do
-			{
-				//跳过'.''..'
-				if (FindFileData.cFileName[0] == '.')
-					continue;
-
-				if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-				{
-					//遍历子文件夹
-				}
-				else
-				{
-					NoteItem *noteItem = new NoteItem(); 
-					//找到一个文件
-					CMzString tmpfilename = tmpDataDir + FindFileData.cFileName;
-					noteItem->cFileName = tmpfilename;
-					LPTSTR fname = new TCHAR[1024];
-					fname = ExtractFileName(tmpfilename.C_Str());
-					noteItem->cTitle = fname;
-
-					TCHAR *tmpFileTime = new TCHAR[40];
-					if (!GetCreateTime(tmpfilename.C_Str(), &tmpFileTime))
-						return;
-
-					noteItem->cDateTime = tmpFileTime;
-					wmemset(tmpFileTime, 0, wcslen(tmpFileTime));
-					noteItem->bSelected = false;
-					m_NoteItems.push_back(*noteItem);
-
-					//加入UiList
-					listItem.Text = noteItem->cTitle;
-					listItem.Data = noteItem;
-					this->m_NoteList.AddItem(listItem);
-				}
-			}
-			while (FindNextFile(hFind, &FindFileData));
-		}
-		FindClose(hFind);//关闭句柄
-	}
-	else
-	{
-		//创建Data目录
 		CreateDirectory(tmpDataDir, NULL);
 	}
+	
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind;
+
+	hFind = FindFirstFile(tmpDataDir + L"*.*", &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) 
+	{
+		return;
+	} 
+	
+	ListItem listItem;
+	do
+	{
+		//跳过'.''..'
+		if (FindFileData.cFileName[0] == '.')
+			continue;
+
+		if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			//遍历子文件夹
+		}
+		else
+		{
+			NoteItem *noteItem = new NoteItem(); 
+			//找到一个文件
+			CMzString tmpfilename = tmpDataDir + FindFileData.cFileName;
+			noteItem->cFileName = tmpfilename;
+			LPTSTR fname = new TCHAR[1024];
+			fname = ExtractFileName(tmpfilename.C_Str());
+			noteItem->cTitle = fname;
+
+			TCHAR *tmpFileTime = new TCHAR[40];
+			if (!GetCreateTime(tmpfilename.C_Str(), &tmpFileTime))
+				return;
+
+			noteItem->cDateTime = tmpFileTime;
+			wmemset(tmpFileTime, 0, wcslen(tmpFileTime));
+			noteItem->bSelected = false;
+			m_NoteItems.push_back(*noteItem);
+
+			//加入UiList
+			listItem.Text = noteItem->cTitle;
+			listItem.Data = noteItem;
+			this->m_NoteList.AddItem(listItem);
+		}
+	}
+	while (FindNextFile(hFind, &FindFileData));
+	FindClose(hFind);//关闭句柄
 
 	m_NoteList.Invalidate();
 	m_NoteList.Update();
