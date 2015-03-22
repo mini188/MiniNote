@@ -70,51 +70,50 @@ bool CM8NoteMainWnd::UpdateOldData(LPTSTR strDataDir)
 	{
 		return false;
 	} 
-	else 
+	
+	CMzString filename;
+	TCHAR *str = 0;
+	TCHAR *sTmp;
+	M8NoteFileReader tmpReader;
+	do
 	{
-		CMzString filename;
-		TCHAR *str = 0;
-		TCHAR *sTmp;
-		M8NoteFileReader tmpReader;
-		do
+		//跳过'.''..'
+		if (FindFileData.cFileName[0] == '.')
+			continue;
+
+		//找到一个文件
+		filename = tmpDataDir + FindFileData.cFileName;
+		if (tmpReader.OpenFile(filename) == false)
 		{
-			//跳过'.''..'
-			if (FindFileData.cFileName[0] == '.')
-				continue;
-
-			//找到一个文件
-			filename = tmpDataDir + FindFileData.cFileName;
-			if (tmpReader.OpenFile(filename) == false)
-			{
-				continue;
-			}
-			str = tmpReader.GetText();//获取文件内容
-			//加载文件，将清除掉INI信息，留下内容及文件名
-			if (IniReadString(L"Header", L"Title", &sTmp, filename))
-			{
-				int ipos = FindStr(str, L"Context=");
-				if (ipos != -1)
-				{
-					int i = 0;
-					ipos += wcslen(L"Content=");
-					while(i <= ipos)
-					{
-						++str;
-						++i;
-					}
-					--str;
-					tmpReader.SetText(*str);
-					//格式化新的文件名
-					LPTSTR szBuffer=new TCHAR[1024];
-					wsprintf(szBuffer, L"%s\\%s.%s", tmpDataDir.C_Str(), sTmp, L"txt");//保存文件名
-					if (tmpReader.SaveAsFile(szBuffer))
-						return DeleteFile(filename) == TRUE;
-				}
-			}
-
+			continue;
 		}
-		while (FindNextFile(hFind, &FindFileData));
+		str = tmpReader.GetText();//获取文件内容
+		//加载文件，将清除掉INI信息，留下内容及文件名
+		if (IniReadString(L"Header", L"Title", &sTmp, filename))
+		{
+			int ipos = FindStr(str, L"Context=");
+			if (ipos != -1)
+			{
+				int i = 0;
+				ipos += wcslen(L"Content=");
+				while(i <= ipos)
+				{
+					++str;
+					++i;
+				}
+				--str;
+				tmpReader.SetText(*str);
+				//格式化新的文件名
+				LPTSTR szBuffer=new TCHAR[1024];
+				wsprintf(szBuffer, L"%s\\%s.%s", tmpDataDir.C_Str(), sTmp, L"txt");//保存文件名
+				if (tmpReader.SaveAsFile(szBuffer))
+					return DeleteFile(filename) == TRUE;
+			}
+		}
+
 	}
+	while (FindNextFile(hFind, &FindFileData));
+
 	FindClose(hFind);//关闭句柄
 	return true;
 }
