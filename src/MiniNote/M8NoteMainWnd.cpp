@@ -26,26 +26,24 @@ CM8NoteMainWnd::~CM8NoteMainWnd(void)
 
 bool CM8NoteMainWnd::CreateNoteItem(LPTSTR strFileName, NoteItem &theItem)
 {
-	if (FileExists(strFileName))
-	{
-		TCHAR *sTmp;
-		//获取标题	
-		if (!IniReadString(L"Header", L"Title", &sTmp, strFileName))
-			return false;
-		theItem.cTitle = sTmp;
-		//GetFileTime(
-		//获取日期
-		if (!IniReadString(L"Header", L"DateTime", &sTmp, strFileName))
-			return false;
-		theItem.cDateTime = sTmp;
-		//文件目录
-		theItem.cFileName = strFileName;
-		return true;
-	}
-	else
+	if (FileExists(strFileName) == false)
 	{
 		return false;
 	}
+
+	TCHAR *sTmp;
+	//获取标题	
+	if (!IniReadString(L"Header", L"Title", &sTmp, strFileName))
+		return false;
+	theItem.cTitle = sTmp;
+	//GetFileTime(
+	//获取日期
+	if (!IniReadString(L"Header", L"DateTime", &sTmp, strFileName))
+		return false;
+	theItem.cDateTime = sTmp;
+	//文件目录
+	theItem.cFileName = strFileName;
+	return true;
 }
 
 NoteItem* CM8NoteMainWnd::GetNoteItem(int nIndex)
